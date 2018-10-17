@@ -1,5 +1,5 @@
 from redbot.core import data_manager
-from .cog import Scrims
+from .scrims import Scrims
 
 async def setup(bot):
     cog = Scrims(bot)
