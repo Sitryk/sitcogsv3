@@ -2,7 +2,6 @@ import datetime
 from random import randint
 from math import floor
 import asyncio
-import logging
 
 from redbot.core import commands, Config, bank
 import discord
@@ -225,7 +224,6 @@ class EconomyTrickle(commands.Cog):
         Display current settings
         """
         settings = await self.config.guild(ctx.guild).all()
-        print(settings)
         form = '```\n'
         for k, v in settings.items():
             if k == 'channels':
@@ -295,7 +293,6 @@ class EconomyTrickle(commands.Cog):
                         templist.append(uid)
                     else:
                         await bank.deposit_credits(u_obj, trickle_amount)
-                        logging.debug(f'Trickled {trickle_amount} to {u_obj}')
 
                 for uid in tmplist:
                     del self.active_users[gid][uid]
