@@ -34,6 +34,7 @@ inverse_map = OrderedDict({v: k for k, v in emoji_map.items()})
 
 loadgif = "https://i.pinimg.com/originals/58/4b/60/584b607f5c2ff075429dc0e7b8d142ef.gif"
 greentick = "http://icons.iconarchive.com/icons/paomedia/small-n-flat/1024/sign-check-icon.png"
+rederror = "https://icons.iconarchive.com/icons/saki/nuoveXT-2/128/Status-dialog-error-icon.png"
 geniusicon = "https://images.genius.com/8ed669cadd956443e29c70361ec4f372.1000x1000x1.png"
 
 GuildDefault = {"autolyrics": False, "channel": None}
@@ -198,9 +199,19 @@ class Lyrics(commands.Cog):
 
             e = discord.Embed(colour=discord.Colour.green())  # Aesthetics
             e.set_author(name="Here are the lyrics for {}".format(song_title), icon_url=greentick)
-            await destination.send(embed=e)
+            try:
+                await destination.send(embed=e)
+            except discord.errors.Forbidden:
+                e = discord.Embed(colour=discord.Colour.red())  # Aesthetics
+                e.set_author(
+                    name="Couldn't send lyrics for {}\nEither you blocked me or you disabled DMs in this server.".format(
+                        song_title
+                    ),
+                    icon_url=rederror,
+                )
+                await sent.edit(embed=e)
+                return
 
-            print(lyrics)
             for page in lyrics:  # Send the lyrics
                 if len(page) >= 1:
                     await destination.send(page)
