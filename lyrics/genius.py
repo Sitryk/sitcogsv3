@@ -9,6 +9,10 @@ import aiohttp
 import asyncio
 
 
+class LyricsNotFoundError(Exception):
+    pass
+
+
 class GeniusSong:
     def __init__(self, *args, **kwargs):
         self.type = kwargs.pop("type", None)
@@ -22,7 +26,10 @@ class GeniusSong:
         self.is_hot = kwargs.pop("hot", False)
         self.views = kwargs.pop("views", None)
         self.api_path = kwargs.pop("api_path")
-        self.lyrics = closed(lyrics_from_path, self.page_url)
+        # self.lyrics = closed(lyrics_from_path, self.page_url)
+
+    async def get_lyrics(self):
+        return await lyrics_from_path(self.page_url)
 
 
 class GeniusArtist:
@@ -38,28 +45,21 @@ class GeniusArtist:
 headers = {"Authorization": "Bearer 2wjXkB5_rWzVnEFOKwFMWhJOwvNPAlFDTywyaRK0jc3gtrCZjx8CsaXjzcE-2_4j"}
 api_url = "https://api.genius.com"
 
-
 # Genius related functions
-
-
-def closed(f, *args, **kwargs):
-    def call():
-        return f(*args, **kwargs)
-
-    async def acall():
-        return await f(*args, **kwargs)
-
-    return acall if asyncio.iscoroutinefunction(f) else call
 
 
 async def lyrics_from_path(path):
     """Gets the lyrics from a song path"""
 
-    async with aiohttp.ClientSession().get(path) as page:
+    async with aiohttp.ClientSession() as session:
+        page = await session.get(path)
         t = await page.text()
         html = BeautifulSoup(t, "html.parser")
         [h.extract() for h in html("script")]
-        lyrics = html.find("div", class_="lyrics").get_text()
+        try:
+            lyrics = html.find("div", class_="lyrics").get_text()
+        except AttributeError as e:
+            raise LyricsNotFoundError from e
         return lyrics
 
 
@@ -69,8 +69,8 @@ async def genius_search(query: str):
     search_url = api_url + "/search"
     data = {"q": query}
     json = None
-    async with aiohttp.ClientSession() as sess:
-        r = await sess.get(search_url, data=data, headers=headers)
+    async with aiohttp.ClientSession() as session:
+        r = await session.get(search_url, data=data, headers=headers)
         json = await r.json()
 
     songs = []
