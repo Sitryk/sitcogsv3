@@ -14,7 +14,10 @@ import asyncio
 import os
 import re
 
-feat_re = re.compile(r"((\[)|(\()){1}.*(of?ficial|feat\.?|ft\.?|audio|video|lyrics?|remix){1}.*(?(2)\]|\))", flags=re.I)
+feat_re = re.compile(
+    r"((\[)|(\()){1}.*(of?ficial|feat\.?|ft\.?|audio|video|lyrics?|remix){1}.*(?(2)\]|\))",
+    flags=re.I,
+)
 
 
 def remove_useless_title_features(string: str):
@@ -94,11 +97,11 @@ class Lyrics(commands.Cog):
     async def lyrics(self, ctx, *, query: str):
         """
         Used to fetch lyrics from a search query
-        Usage: 
+        Usage:
                [p]lyrics white ferrari
                [p]lyrics public np
 
-        You can use '[p]lyrics np' to search for what's currently 
+        You can use '[p]lyrics np' to search for what's currently
         playing in audio
 
         Put the word public at the beginning of your search to send the
@@ -187,8 +190,15 @@ class Lyrics(commands.Cog):
                 )
 
             song = songs[choice]
-            getlyrics = song.lyrics
-            lyrics = await getlyrics()
+
+            try:
+                lyrics = await song.get_lyrics()
+            except genius.LyricsNotFoundError:
+                e = discord.Embed(colour=discord.Colour.red())
+                e.set_author(name=f"Error getting lyrics for {song.full_title}", icon_url=rederror)
+                await sent.edit(embed=e)
+                return
+
             lyrics = cf.pagify(lyrics)
 
             song_title = song.full_title
@@ -223,7 +233,7 @@ class Lyrics(commands.Cog):
     @commands.command(pass_context=True)
     async def genius(self, ctx, *, query: str):
         """Used to fetch items from a search query
-        Usage: 
+        Usage:
                [p]genius Childish Gambino
                [p]genius Kendrick Lamar
         """
@@ -248,7 +258,9 @@ class Lyrics(commands.Cog):
 
         songs = await genius.genius_search(query)
         if len(songs) == 0:
-            await ctx.send("no results vro")
+            e = discord.Embed(colour=discord.Colour.red())
+            e.set_author(name=f"No songs were found for your query.", icon_url=rederror)
+            await sent.edit(embed=e)
             return
         embeds = []
 
@@ -271,7 +283,13 @@ class Lyrics(commands.Cog):
     # Lunars menu control
 
     async def genius_menu(
-        self, ctx, displays: list, extra_data: dict, message: discord.Message = None, page=0, timeout: int = 30
+        self,
+        ctx,
+        displays: list,
+        extra_data: dict,
+        message: discord.Message = None,
+        page=0,
+        timeout: int = 30,
     ):
         """
         Menu control logic for this credited to
@@ -342,8 +360,14 @@ class Lyrics(commands.Cog):
 
             destination = await self.get_dest(ctx)
 
-            getlyrics = song.lyrics
-            lyrics = await getlyrics()
+            try:
+                lyrics = await song.get_lyrics()
+            except genius.LyricsNotFoundError:
+                e = discord.Embed(colour=discord.Colour.red())
+                e.set_author(name=f"Error getting lyrics for {song.full_title}", icon_url=rederror)
+                await message.edit(embed=e)
+                return
+
             lyrics = cf.pagify(lyrics)
 
             for page in lyrics:
