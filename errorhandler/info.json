@@ -1,0 +1,9 @@
+{
+    "author": ["sitryk"],
+    "description": "Adds ability to replace the output of the bots error handler when CommandInvokeError is raised, all other errors get handled by the old handler",
+    "install_msg": "Thanks for installing ErrorHandler. Type [p]help ErrorHandler to see available commands.",
+    "short": "Allow custom error message",
+    "hidden": false,
+    "tags": ["error", "utility", ""],
+    "type": "COG"
+}
