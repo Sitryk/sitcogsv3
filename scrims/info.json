@@ -8,5 +8,6 @@
     ],
     "description": "Help with queueing scrim matches or autoscrimming",
     "type": "COG",
-    "disabled": true
+    "disabled": true,
+    "hidden": true
 }
