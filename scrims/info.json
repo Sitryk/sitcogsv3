@@ -1,5 +1,5 @@
 {
-    "author": "Sitryk",
+    "author": ["Sitryk"],
     "install_msg": "Thanks for installing this cog. Get started by using `[p]help Scrims`",
     "name": "Scrims",
     "short": "Queue scrim matches for Fortnite",
@@ -7,5 +7,6 @@
         "utilities", "fortnite", "scrims"
     ],
     "description": "Help with queueing scrim matches or autoscrimming",
-    "type": "COG"
+    "type": "COG",
+    "disabled": true
 }
