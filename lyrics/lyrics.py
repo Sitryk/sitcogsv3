@@ -1,18 +1,19 @@
 # cog.py
 
-from redbot.core.utils import chat_formatting as cf
-from redbot.core import Config, checks, commands
-from discord.ext.commands import TextChannelConverter
-import lavalink
-import discord
-
-from . import genius
-
-from collections import OrderedDict
-import contextlib
 import asyncio
+import contextlib
 import os
 import re
+from collections import OrderedDict
+
+import discord
+import lavalink
+from discord.ext.commands import TextChannelConverter
+from redbot.core import Config, checks, commands
+from redbot.core.utils import chat_formatting as cf
+from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
+
+from . import genius
 
 feat_re = re.compile(
     r"((\[)|(\()){1}.*(of?ficial|feat\.?|ft\.?|audio|video|lyrics?|remix){1}.*(?(2)\]|\))",
@@ -93,7 +94,7 @@ class Lyrics(commands.Cog):
 
     # Base commands start
 
-    @commands.command(pass_context=True)
+    @commands.group(invoke_without_command=True)
     async def lyrics(self, ctx, *, query: str):
         """
         Used to fetch lyrics from a search query
@@ -229,6 +230,113 @@ class Lyrics(commands.Cog):
             e = discord.Embed(colour=discord.Colour.green())  # Aesthetics
             e.set_author(name="Sent lyrics for {}".format(song_title), icon_url=greentick)
             await sent.edit(embed=e)
+
+    @lyrics.command()
+    @commands.bot_has_permissions(embed_links=True)
+    async def spotify(self, ctx, *, user: discord.Member = None):
+        """
+        Returns lyrics from a member's Listening to Spotify status.
+
+        User arguments - Mention/ID
+        NOTE: This command uses Discord presence intent, enable in development portal.
+        """
+        if not user:
+            user = ctx.author
+
+        guild = ctx.guild
+        channel = ctx.channel
+        target = "You are" if user is ctx.author else f"{user} is"
+
+        spot = next((c for c in user.activities if isinstance(c, discord.Spotify)), None)
+        if spot is None:
+            return await ctx.send(f"{target} currently not listening to Spotify! 🤔")
+
+        query = f"{spot.title} {spot.artist}"
+        songs = await genius.genius_search(query)
+        if len(songs) < 1:
+            desc = f"There were no results for {spot.title}"
+            e = discord.Embed(description=desc, colour=16776960)
+            await ctx.send(embed=e)
+            return
+
+        items = ""
+        for idx, song in enumerate(songs):
+            items += f"`[{str(idx + 1).zfill(2)}]` - {song.full_title}\n\n"
+
+        authdesc = "Genius"
+        footdesc = f"Results based on search for: {spot.title}"
+
+        choices = discord.Embed(
+            description=items,
+            colour=discord.Color.green(),
+        )
+        choices.set_author(name=authdesc, icon_url=geniusicon)
+        choices.set_footer(text=footdesc)
+
+        sent = await ctx.send(embed=choices)
+
+        def check(msg):
+            content = msg.content
+            if (
+                content.isdigit()
+                and int(content) in range(0, len(items) + 1)
+                and msg.author is ctx.author
+                and msg.channel is channel
+            ):
+                return True
+
+        try:
+            choice = await self.bot.wait_for("message", timeout=60, check=check)
+        except asyncio.TimeoutError:
+            choice = None
+
+        if choice is None or choice.content.strip() == "0":
+            e = discord.Embed(description="Cancelled", colour=discord.Colour.orange())
+            await sent.edit(embed=e)
+            return
+        else:
+            choice = choice.content.strip()
+            choice = int(choice) - 1
+
+            song = songs[choice]
+
+            try:
+                lyrics = await song.get_lyrics()
+            except genius.LyricsNotFoundError:
+                e = discord.Embed(colour=discord.Colour.red())
+                e.set_author(
+                    name=f"Error getting lyrics for {song.full_title}",
+                    icon_url=rederror,
+                )
+                await sent.edit(embed=e)
+                return
+
+            song_title = song.full_title
+
+            temp_pages = []
+            pages = []
+            for page in cf.pagify(lyrics, page_length=500):
+                temp_pages.append(page)
+
+            max_i = len(temp_pages)
+            i = 1
+            for page in temp_pages:
+                artists = ", ".join(a for a in spot.artists)
+                e = discord.Embed(
+                    title=f"{spot.title} by {artists}",
+                    colour=discord.Colour.green(),
+                )
+                e.set_author(
+                    name=f"{user.display_name} is listening to:",
+                    icon_url=str(user.avatar_url)
+                )
+                e.description = page
+                e.set_thumbnail(url=spot.album_cover_url)
+                e.set_footer(text=f"Page {i} of {max_i}")
+                pages.append(e)
+                i += 1
+            await sent.delete()
+            await menu(ctx, pages, controls=DEFAULT_CONTROLS, timeout=300.0)
 
     @commands.command(pass_context=True)
     async def genius(self, ctx, *, query: str):
