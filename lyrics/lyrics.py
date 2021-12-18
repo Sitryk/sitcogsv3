@@ -50,8 +50,11 @@ class Lyrics(commands.Cog):
         self.config.register_guild(**GuildDefault)
 
     async def get_dest(self, ctx, public: bool = False):
-        dest = await self.config.guild(ctx.guild).channel()
-        dest = ctx.guild.get_channel(dest)
+        if not ctx.guild:
+            dest = ctx.author
+        else:
+            dest = await self.config.guild(ctx.guild).channel()
+            dest = ctx.guild.get_channel(dest)
 
         if public:
             if dest is None:
